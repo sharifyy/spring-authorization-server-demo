@@ -19,12 +19,14 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
+import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 
+import java.time.Duration;
 import java.util.UUID;
 
 @Configuration
@@ -73,6 +75,11 @@ public class SecurityConfig {
 				.requireProofKey(true)
 				.build()
 			)
+			.tokenSettings(TokenSettings.builder()
+				.accessTokenTimeToLive(Duration.ofMinutes(5))
+				.refreshTokenTimeToLive(Duration.ofMinutes(15))
+				.authorizationCodeTimeToLive(Duration.ofSeconds(60))
+				.build())
 			.build();
 
 		return new InMemoryRegisteredClientRepository(client1);
