@@ -84,7 +84,14 @@ public class SecurityConfig {
 				.build())
 			.build();
 
-		return new InMemoryRegisteredClientRepository(client1);
+		RegisteredClient client2 = RegisteredClient.withId(UUID.randomUUID().toString())
+			.clientId("resource-server")
+			.clientSecret("secret2")
+			.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+			.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+			.build();
+
+		return new InMemoryRegisteredClientRepository(client1,client2);
 	}
 
 	@Bean
