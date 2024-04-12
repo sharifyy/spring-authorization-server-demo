@@ -25,6 +25,7 @@ import org.springframework.security.oauth2.server.authorization.token.JwtEncodin
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 
 import java.time.Duration;
@@ -53,11 +54,18 @@ public class SecurityConfig {
 		httpSecurity.authorizeHttpRequests(requestMatcherRegistry ->
 				requestMatcherRegistry.requestMatchers("/login", "/error", "/logo.png").permitAll()
 					.anyRequest().authenticated())
-			.formLogin(httpSecurityFormLoginConfigurer -> httpSecurityFormLoginConfigurer.loginPage("/login"));
+			.formLogin(c->c.loginPage("/login"))
+			.oauth2Login(c->c.loginPage("/login")
+				.successHandler(authenticationSuccessHandler()));
 
 		return httpSecurity.build();
 	}
 
+	private AuthenticationSuccessHandler authenticationSuccessHandler() {
+		var successHandler = new FederatedIdentityAuthenticationSuccessHandler();
+		successHandler.setOAuth2UserHandler(new UserRepositoryOAuth2UserHandler());
+		return successHandler;
+	}
 
 	@Bean
 	public RegisteredClientRepository registeredClientRepository() {
