@@ -6,9 +6,12 @@ import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.User;
@@ -20,6 +23,7 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.oidc.OidcScopes;
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
+import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
@@ -34,6 +38,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 
+import javax.sql.DataSource;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
@@ -42,7 +47,7 @@ import java.util.UUID;
 @Configuration
 public class SecurityConfig {
 
-
+ 	// https://docs.spring.io/spring-authorization-server/reference/guides/how-to-jpa.html
 	@Bean
 	@Order(1)
 	public SecurityFilterChain authFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -76,40 +81,6 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	public RegisteredClientRepository registeredClientRepository() {
-		RegisteredClient client1 = RegisteredClient.withId(UUID.randomUUID().toString())
-			.clientId("javatalks-web-app")
-//			.clientSecret("secret")
-			.clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
-			.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-//			.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-			.authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-			.redirectUri("http://127.0.0.1:8080/login/oauth2/code/java-talks")
-			.scope(OidcScopes.OPENID)
-			.scope(OidcScopes.EMAIL)
-			.clientSettings(ClientSettings.builder()
-				.requireAuthorizationConsent(true)
-				.requireProofKey(true)
-				.build()
-			)
-			.tokenSettings(TokenSettings.builder()
-				.accessTokenTimeToLive(Duration.ofMinutes(5))
-				.refreshTokenTimeToLive(Duration.ofMinutes(15))
-				.authorizationCodeTimeToLive(Duration.ofSeconds(60))
-				.build())
-			.build();
-
-		RegisteredClient client2 = RegisteredClient.withId(UUID.randomUUID().toString())
-			.clientId("resource-server")
-			.clientSecret("secret2")
-			.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-			.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-			.build();
-
-		return new InMemoryRegisteredClientRepository(client1,client2);
-	}
-
-	@Bean
 	public UserDetailsService userDetailsService(){
 		UserDetails user1 = User.withUsername("sharifyy").password("secret").authorities("developer").build();
 		return new InMemoryUserDetailsManager(user1);
@@ -140,5 +111,39 @@ public class SecurityConfig {
 			.build();
 		JWKSet jwkSet = new JWKSet(rsaKey);
 		return new ImmutableJWKSet<>(jwkSet);
+	}
+
+	@Bean
+	JdbcRegisteredClientRepository registeredClientRepository(DataSource dataSource) {
+		return new JdbcRegisteredClientRepository(new JdbcTemplate(dataSource));
+	}
+
+	@Bean
+	ApplicationRunner runner(RegisteredClientRepository clientRepository){
+		return args -> {
+			RegisteredClient client1 = RegisteredClient.withId(UUID.randomUUID().toString())
+				.clientId("javatalks-web-app")
+//			.clientSecret("secret")
+				.clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
+				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+//			.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+				.authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+				.redirectUri("http://127.0.0.1:8080/login/oauth2/code/java-talks")
+				.scope(OidcScopes.OPENID)
+				.scope(OidcScopes.EMAIL)
+				.clientSettings(ClientSettings.builder()
+					.requireAuthorizationConsent(true)
+					.requireProofKey(true)
+					.build()
+				)
+				.tokenSettings(TokenSettings.builder()
+					.accessTokenTimeToLive(Duration.ofMinutes(5))
+					.refreshTokenTimeToLive(Duration.ofMinutes(15))
+					.authorizationCodeTimeToLive(Duration.ofSeconds(60))
+					.build())
+				.build();
+
+			clientRepository.save(client1);
+        };
 	}
 }
