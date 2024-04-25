@@ -9,6 +9,11 @@ spring:
                         client-id: ${GOOGLE_CLIENT_ID}
                         client-secret: ${GOOGLE_CLIENT_SECRET}
 
+jwt:
+    key:
+        id: 'customize-id-0354-4b33-867f-23d7b5e56cc5'
+        public: classpath:certs/public.pem
+        private: classpath:certs/private.pem
 logging:
     level:
         org:
